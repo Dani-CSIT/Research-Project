@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCart } from '../../contexts/CartContext';
 import { productAPI } from '../../services/api';
+import { getProductImageUrl } from '../../utils/imageHelper';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -59,7 +60,7 @@ const ProductDetail = () => {
         <div style={styles.imageSection}>
           <div style={styles.mainImage}>
             <img 
-              src={product.images?.[selectedImage]?.url || 'https://via.placeholder.com/600x600'} 
+              src={getProductImageUrl(product, selectedImage)} 
               alt={product.name}
               style={styles.image}
             />
@@ -68,7 +69,7 @@ const ProductDetail = () => {
             {Array.isArray(product.images) && product.images.map((image, index) => (
               <img
                 key={index}
-                src={image?.url || 'https://via.placeholder.com/80x80'}
+                src={getProductImageUrl(product, index)}
                 alt={`${product.name} ${index + 1}`}
                 style={{
                   ...styles.thumbnail,

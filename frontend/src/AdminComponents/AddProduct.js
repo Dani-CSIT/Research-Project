@@ -19,8 +19,9 @@ const AddProduct = () => {
     brand: '',
     inventory: '',
     sku: '',
-    image: ''
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -33,6 +34,19 @@ const AddProduct = () => {
     });
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -40,20 +54,24 @@ const AddProduct = () => {
     setSuccess('');
 
     try {
-      const payload = {
-        name: formData.name,
-        description: formData.description,
-        price: Number(formData.price),
-        ...(formData.originalPrice ? { originalPrice: Number(formData.originalPrice) } : {}),
-        category: formData.category,
-        subcategory: formData.subcategory,
-        brand: formData.brand,
-        inventory: Number(formData.inventory),
-        sku: formData.sku,
-        images: formData.image ? [{ url: formData.image, alt: formData.name }] : [],
-      };
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('price', formData.price);
+      if (formData.originalPrice) {
+        formDataToSend.append('originalPrice', formData.originalPrice);
+      }
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('subcategory', formData.subcategory);
+      formDataToSend.append('brand', formData.brand);
+      formDataToSend.append('inventory', formData.inventory);
+      formDataToSend.append('sku', formData.sku);
+      
+      if (imageFile) {
+        formDataToSend.append('image', imageFile);
+      }
 
-      await createProduct(payload);
+      await createProduct(formDataToSend);
       setSuccess('Product created successfully!');
       setTimeout(() => {
         navigate('/admin/products');
@@ -220,17 +238,46 @@ const AddProduct = () => {
                 />
               </Grid>
 
-              {/* Image URL */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Image URL"
-                  name="image"
-                  type="url"
-                  value={formData.image}
-                  onChange={handleChange}
-                  placeholder="https://example.com/image.jpg"
-                />
+              {/* Image Upload */}
+              <Grid item xs={12}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
+                    Product Image
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    fullWidth
+                    sx={{ 
+                      textTransform: 'none',
+                      height: 56,
+                      borderStyle: 'dashed',
+                      borderWidth: 2
+                    }}
+                  >
+                    {imageFile ? imageFile.name : 'Choose Image File'}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      onChange={handleImageChange}
+                    />
+                  </Button>
+                  {imagePreview && (
+                    <Box sx={{ mt: 2, textAlign: 'center' }}>
+                      <img 
+                        src={imagePreview} 
+                        alt="Preview" 
+                        style={{ 
+                          maxWidth: '100%', 
+                          maxHeight: '300px',
+                          borderRadius: '8px',
+                          border: '1px solid #e0e0e0'
+                        }} 
+                      />
+                    </Box>
+                  )}
+                </Box>
               </Grid>
 
               {/* Submit Button */}

@@ -46,7 +46,10 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(cors());
-app.use(helmet());
+// Use helmet but allow cross-origin resource loading for uploaded images
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 app.use(morgan('dev'));
 
 // Serve uploaded images

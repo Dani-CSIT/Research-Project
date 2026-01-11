@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getProducts, deleteProduct, getMockProducts } from '../services/adminAPI';
+import { getProductImageUrl } from '../utils/imageHelper';
 
 const ProductManagement = () => {
   const [products, setProducts] = useState([]);
@@ -183,7 +184,7 @@ const ProductManagement = () => {
                     <td style={{ padding: '1rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center' }}>
                         <img 
-                          src={(product.images && product.images[0] && product.images[0].url) || product.image || 'https://via.placeholder.com/50'} 
+                          src={getProductImageUrl(product, 0)} 
                           alt={product.name}
                           style={{ 
                             width: '50px', 

@@ -32,7 +32,7 @@ const importData = async () => {
         category: 'men',
         subcategory: 'Shirts',
         images: [
-          { url: 'https://images.unsplash.com/photo-1596755094514-87e34085b2c?w=500&h=600&fit=crop', alt: 'Classic White Shirt' }
+          { url: '/uploads/Classic White Shirt.jpg', alt: 'Classic White Shirt' }
         ],
         sizes: ['S', 'M', 'L', 'XL'],
         colors: [{ name: 'White', code: '#FFFFFF' }],
@@ -53,7 +53,7 @@ const importData = async () => {
         category: 'women',
         subcategory: 'Dresses',
         images: [
-          { url: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500&h=600&fit=crop', alt: 'Floral Summer Dress' }
+          { url: '/uploads/Floral Summer Dress.jpg', alt: 'Floral Summer Dress' }
         ],
         sizes: ['XS', 'S', 'M', 'L'],
         colors: [{ name: 'Floral', code: '#FF69B4' }],
@@ -74,7 +74,7 @@ const importData = async () => {
         category: 'kids',
         subcategory: 'T-Shirts',
         images: [
-          { url: 'https://images.unsplash.com/photo-1622290291468-2f3766aa2c47?w=500&h=600&fit=crop', alt: 'Kids Cartoon T-Shirt' }
+          { url: '/uploads/kids T-Shirts.png', alt: 'Kids Cartoon T-Shirt' }
         ],
         sizes: ['4Y', '5Y', '6Y', '7Y'],
         colors: [{ name: 'Blue', code: '#4169E1' }],
@@ -88,8 +88,18 @@ const importData = async () => {
       }
     ];
 
-    // Insert products
-    await Product.insertMany(products);
+    // Ensure images field is present; if empty, either leave empty array
+    // or use DEFAULT_PRODUCT_IMAGE from env if provided
+    const defaultImage = process.env.DEFAULT_PRODUCT_IMAGE || '';
+    const processed = products.map((p) => {
+      if (Array.isArray(p.images) && p.images.length > 0) return p;
+      if (defaultImage) {
+        return { ...p, images: [{ url: defaultImage, alt: p.name || 'Product Image' }] };
+      }
+      return { ...p, images: [] };
+    });
+
+    await Product.insertMany(processed);
 
     console.log('✅ Sample data imported successfully');
     process.exit();

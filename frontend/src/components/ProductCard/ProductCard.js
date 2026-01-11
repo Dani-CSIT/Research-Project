@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../../contexts/CartContext';
+import { getProductImageUrl } from '../../utils/imageHelper';
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
@@ -16,8 +17,7 @@ const ProductCard = ({ product }) => {
     <div style={styles.card}>
       <Link to={`/product/${product._id}`} style={styles.link}>
         <img 
-          // Assuming product.images is an array of objects, access the URL property
-          src={product.images?.[0]?.url || product.images?.[0] || 'https://via.placeholder.com/300x300'} 
+          src={getProductImageUrl(product, 0)} 
           alt={product.name}
           style={styles.image}
         />

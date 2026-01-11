@@ -22,8 +22,10 @@ const EditProduct = () => {
     brand: '',
     countInStock: '',
     sku: '',
-    image: ''
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [currentImage, setCurrentImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -48,8 +50,14 @@ const EditProduct = () => {
           brand: product.brand || '',
           countInStock: typeof product.inventory === 'number' ? product.inventory : (product.countInStock || ''),
           sku: product.sku || '',
-          image: Array.isArray(product.images) ? (product.images[0]?.url || '') : (product.image || '')
         });
+        
+        // Set current image
+        const imageUrl = Array.isArray(product.images) ? (product.images[0]?.url || '') : (product.image || '');
+        if (imageUrl) {
+          setCurrentImage(imageUrl);
+          setImagePreview(imageUrl);
+        }
       }
     } catch (error) {
       setError('Failed to load product');
@@ -65,6 +73,19 @@ const EditProduct = () => {
     });
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -72,19 +93,25 @@ const EditProduct = () => {
     setSuccess('');
     
     try {
-      const payload = {
-        name: formData.name,
-        description: formData.description,
-        price: Number(formData.price),
-        ...(formData.originalPrice ? { originalPrice: Number(formData.originalPrice) } : {}),
-        category: formData.category,
-        subcategory: formData.subcategory,
-        brand: formData.brand,
-        inventory: Number(formData.countInStock),
-        sku: formData.sku,
-        images: formData.image ? [{ url: formData.image, alt: formData.name }] : []
-      };
-      await updateProduct(id, payload);
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('price', formData.price);
+      if (formData.originalPrice) {
+        formDataToSend.append('originalPrice', formData.originalPrice);
+      }
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('subcategory', formData.subcategory);
+      formDataToSend.append('brand', formData.brand);
+      formDataToSend.append('inventory', formData.countInStock);
+      formDataToSend.append('sku', formData.sku);
+      
+      // Only append image if a new one was selected
+      if (imageFile) {
+        formDataToSend.append('image', imageFile);
+      }
+      
+      await updateProduct(id, formDataToSend);
       setSuccess('Product updated successfully!');
       setTimeout(() => {
         navigate('/admin/products');
@@ -251,16 +278,49 @@ const EditProduct = () => {
                 />
               </Grid>
 
-              {/* Image URL */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Image URL"
-                  name="image"
-                  type="url"
-                  value={formData.image}
-                  onChange={handleChange}
-                />
+              {/* Image Upload */}
+              <Grid item xs={12}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
+                    Product Image
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    fullWidth
+                    sx={{ 
+                      textTransform: 'none',
+                      height: 56,
+                      borderStyle: 'dashed',
+                      borderWidth: 2
+                    }}
+                  >
+                    {imageFile ? imageFile.name : 'Choose New Image (Optional)'}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      onChange={handleImageChange}
+                    />
+                  </Button>
+                  {imagePreview && (
+                    <Box sx={{ mt: 2, textAlign: 'center' }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                        {imageFile ? 'New Image Preview' : 'Current Image'}
+                      </Typography>
+                      <img 
+                        src={imagePreview.startsWith('/uploads/') ? `http://localhost:5000${imagePreview}` : imagePreview} 
+                        alt="Preview" 
+                        style={{ 
+                          maxWidth: '100%', 
+                          maxHeight: '300px',
+                          borderRadius: '8px',
+                          border: '1px solid #e0e0e0'
+                        }} 
+                      />
+                    </Box>
+                  )}
+                </Box>
               </Grid>
 
               {/* Submit Button */}

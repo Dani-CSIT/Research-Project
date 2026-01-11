@@ -10,6 +10,7 @@ import {
   , getAllUsers, createUser, updateUser, deleteUser
 } from '../controllers/adminController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
+import upload from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
@@ -19,8 +20,8 @@ router.use(admin);
 
 // Product routes
 router.get('/products', getAllProducts);
-router.post('/products', createProduct);
-router.put('/products/:id', updateProduct);
+router.post('/products', upload.single('image'), createProduct);
+router.put('/products/:id', upload.single('image'), updateProduct);
 router.delete('/products/:id', deleteProduct);
 
 // User management

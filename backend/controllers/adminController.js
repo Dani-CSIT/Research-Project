@@ -2,6 +2,8 @@ import Product from '../models/Product.js';
 import Order from '../models/Order.js';
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
+import fs from 'fs';
+import path from 'path';
 
 // @desc    Create new product
 // @route   POST /api/admin/products
@@ -9,6 +11,19 @@ import bcrypt from 'bcryptjs';
 export const createProduct = async (req, res) => {
   try {
     const body = req.body || {};
+
+    // Handle image upload
+    let images = [];
+    if (req.file) {
+      // If file was uploaded, use the file path
+      const imageUrl = `/uploads/products/${req.file.filename}`;
+      images = [{ url: imageUrl, alt: body.name }];
+    } else if (body.image) {
+      // Fallback to URL if provided (for backwards compatibility)
+      images = [{ url: body.image, alt: body.name }];
+    } else if (Array.isArray(body.images)) {
+      images = body.images;
+    }
 
     const payload = {
       user: req.user?._id,
@@ -21,11 +36,7 @@ export const createProduct = async (req, res) => {
       brand: body.brand,
       inventory: body.inventory ?? body.countInStock,
       sku: body.sku,
-      images: Array.isArray(body.images)
-        ? body.images
-        : body.image
-        ? [{ url: body.image, alt: body.name }]
-        : [],
+      images: images,
     };
 
     const product = new Product(payload);
@@ -38,6 +49,12 @@ export const createProduct = async (req, res) => {
     });
   } catch (error) {
     console.error('Create product error:', error);
+    // Clean up uploaded file if product creation fails
+    if (req.file) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('Error deleting file:', err);
+      });
+    }
     if (error?.name === 'ValidationError') {
       return res.status(400).json({ success: false, message: 'Invalid product data' });
     }
@@ -53,18 +70,50 @@ export const createProduct = async (req, res) => {
 // @access  Private/Admin
 export const updateProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-
-    if (!product) {
+    const existingProduct = await Product.findById(req.params.id);
+    
+    if (!existingProduct) {
+      // Clean up uploaded file if product doesn't exist
+      if (req.file) {
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error('Error deleting file:', err);
+        });
+      }
       return res.status(404).json({
         success: false,
         message: 'Product not found'
       });
     }
+
+    // Prepare update data
+    const updateData = { ...req.body };
+
+    // Handle image upload
+    if (req.file) {
+      const imageUrl = `/uploads/products/${req.file.filename}`;
+      updateData.images = [{ url: imageUrl, alt: updateData.name || existingProduct.name }];
+      
+      // Delete old image file if it exists and is a local file
+      if (existingProduct.images && existingProduct.images.length > 0) {
+        const oldImageUrl = existingProduct.images[0].url;
+        if (oldImageUrl && oldImageUrl.startsWith('/uploads/')) {
+          const oldImagePath = path.join(process.cwd(), oldImageUrl);
+          fs.unlink(oldImagePath, (err) => {
+            if (err) console.error('Error deleting old image:', err);
+          });
+        }
+      }
+    } else if (updateData.image) {
+      // If no file but image URL provided
+      updateData.images = [{ url: updateData.image, alt: updateData.name || existingProduct.name }];
+      delete updateData.image;
+    }
+
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
 
     res.json({
       success: true,
@@ -73,6 +122,12 @@ export const updateProduct = async (req, res) => {
     });
   } catch (error) {
     console.error('Update product error:', error);
+    // Clean up uploaded file if update fails
+    if (req.file) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('Error deleting file:', err);
+      });
+    }
     res.status(500).json({
       success: false,
       message: 'Error updating product'
@@ -85,7 +140,7 @@ export const updateProduct = async (req, res) => {
 // @access  Private/Admin
 export const deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
+    const product = await Product.findById(req.params.id);
 
     if (!product) {
       return res.status(404).json({
@@ -93,6 +148,20 @@ export const deleteProduct = async (req, res) => {
         message: 'Product not found'
       });
     }
+
+    // Delete associated image files
+    if (product.images && product.images.length > 0) {
+      product.images.forEach(image => {
+        if (image.url && image.url.startsWith('/uploads/')) {
+          const imagePath = path.join(process.cwd(), image.url);
+          fs.unlink(imagePath, (err) => {
+            if (err) console.error('Error deleting image file:', err);
+          });
+        }
+      });
+    }
+
+    await Product.findByIdAndDelete(req.params.id);
 
     res.json({
       success: true,

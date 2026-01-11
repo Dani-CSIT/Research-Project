@@ -1,12 +1,18 @@
 const API_URL = '/api/admin';
 
 // Helper function to get auth headers
-const getAuthHeaders = () => {
+const getAuthHeaders = (isFormData = false) => {
   const token = localStorage.getItem('adminToken');
-  return {
-    'Content-Type': 'application/json',
+  const headers = {
     'Authorization': `Bearer ${token}`
   };
+  
+  // Don't set Content-Type for FormData, let browser set it with boundary
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
+  
+  return headers;
 };
 
 // Dashboard API
@@ -47,10 +53,11 @@ export const getProducts = async () => {
 
 export const createProduct = async (productData) => {
   try {
+    const isFormData = productData instanceof FormData;
     const response = await fetch(`${API_URL}/products`, {
       method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(productData)
+      headers: getAuthHeaders(isFormData),
+      body: isFormData ? productData : JSON.stringify(productData)
     });
     
     if (!response.ok) {
@@ -66,10 +73,11 @@ export const createProduct = async (productData) => {
 
 export const updateProduct = async (productId, productData) => {
   try {
+    const isFormData = productData instanceof FormData;
     const response = await fetch(`${API_URL}/products/${productId}`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(productData)
+      headers: getAuthHeaders(isFormData),
+      body: isFormData ? productData : JSON.stringify(productData)
     });
     
     if (!response.ok) {
